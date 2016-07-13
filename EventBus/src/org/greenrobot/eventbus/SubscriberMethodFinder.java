@@ -137,8 +137,7 @@ class SubscriberMethodFinder {
         return null;
     }
 
-    private List<SubscriberMethod> findUsingReflection(Class<?> subscriberClass) {
-        FindState findState = prepareFindState();
+    private List<SubscriberMethod> findUsingReflection(Class<?> subscriberClass) {        FindState findState = prepareFindState();
         findState.initForSubscriber(subscriberClass);
         while (findState.clazz != null) {
             findUsingReflectionInSingleClass(findState);
@@ -168,7 +167,7 @@ class SubscriberMethodFinder {
                         if (findState.checkAdd(method, eventType)) {
                             ThreadMode threadMode = subscribeAnnotation.threadMode();
                             findState.subscriberMethods.add(new SubscriberMethod(method, eventType, threadMode,
-                                    subscribeAnnotation.priority(), subscribeAnnotation.sticky()));
+                                    subscribeAnnotation.priority(), subscribeAnnotation.sticky(), subscribeAnnotation.tag()));
                         }
                     }
                 } else if (strictMethodVerification && method.isAnnotationPresent(Subscribe.class)) {

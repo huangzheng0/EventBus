@@ -52,6 +52,7 @@ public class EventBus {
     private final Map<Object, List<Class<?>>> typesBySubscriber;
     private final Map<Class<?>, Object> stickyEvents;
 
+
     private final ThreadLocal<PostingThreadState> currentPostingThreadState = new ThreadLocal<PostingThreadState>() {
         @Override
         protected PostingThreadState initialValue() {
@@ -64,6 +65,8 @@ public class EventBus {
     private final AsyncPoster asyncPoster;
     private final SubscriberMethodFinder subscriberMethodFinder;
     private final ExecutorService executorService;
+
+    private final ExtraEventProvider mExtraEventProvider;
 
     private final boolean throwSubscriberException;
     private final boolean logSubscriberExceptions;
@@ -108,6 +111,7 @@ public class EventBus {
         subscriptionsByEventType = new HashMap<>();
         typesBySubscriber = new HashMap<>();
         stickyEvents = new ConcurrentHashMap<>();
+
         mainThreadPoster = new HandlerPoster(this, Looper.getMainLooper(), 10);
         backgroundPoster = new BackgroundPoster(this);
         asyncPoster = new AsyncPoster(this);
@@ -121,6 +125,8 @@ public class EventBus {
         throwSubscriberException = builder.throwSubscriberException;
         eventInheritance = builder.eventInheritance;
         executorService = builder.executorService;
+
+        mExtraEventProvider = new TagEventProvider();
     }
 
     /**
@@ -136,7 +142,10 @@ public class EventBus {
         List<SubscriberMethod> subscriberMethods = subscriberMethodFinder.findSubscriberMethods(subscriberClass);
         synchronized (this) {
             for (SubscriberMethod subscriberMethod : subscriberMethods) {
-                subscribe(subscriber, subscriberMethod);
+                if(mExtraEventProvider!=null&&mExtraEventProvider.interesting(subscriberMethod))
+                    mExtraEventProvider.subscribe(subscriber,subscriberMethod);
+                else
+                    subscribe(subscriber, subscriberMethod);
             }
         }
     }
@@ -223,6 +232,8 @@ public class EventBus {
 
     /** Unregisters the given subscriber from all event classes. */
     public synchronized void unregister(Object subscriber) {
+        if(mExtraEventProvider!=null)
+            mExtraEventProvider.unsubscribe(subscriber);
         List<Class<?>> subscribedTypes = typesBySubscriber.get(subscriber);
         if (subscribedTypes != null) {
             for (Class<?> eventType : subscribedTypes) {
@@ -255,6 +266,14 @@ public class EventBus {
                 postingState.isMainThread = false;
             }
         }
+    }
+
+    public void postTagEvent(String tag){
+        postTagEvent(tag,null);
+    }
+
+    public void postTagEvent(String tag,Object event){
+        post(new TagEvent(tag,event));
     }
 
     /**
@@ -361,8 +380,11 @@ public class EventBus {
 
     private void postSingleEvent(Object event, PostingThreadState postingState) throws Error {
         Class<?> eventClass = event.getClass();
+        if(mExtraEventProvider!=null&&mExtraEventProvider.interesting(event)){
+            eventClass = mExtraEventProvider.getClass(event);
+        }
         boolean subscriptionFound = false;
-        if (eventInheritance) {
+        if (eventInheritance&&eventClass!=null) {
             List<Class<?>> eventTypes = lookupAllEventTypes(eventClass);
             int countTypes = eventTypes.size();
             for (int h = 0; h < countTypes; h++) {
@@ -386,7 +408,11 @@ public class EventBus {
     private boolean postSingleEventForEventType(Object event, PostingThreadState postingState, Class<?> eventClass) {
         CopyOnWriteArrayList<Subscription> subscriptions;
         synchronized (this) {
-            subscriptions = subscriptionsByEventType.get(eventClass);
+            if(mExtraEventProvider!=null&&mExtraEventProvider.interesting(event)) {
+                subscriptions = mExtraEventProvider.getSubscription(event, eventClass);
+                event = mExtraEventProvider.getEvent(event);
+            }else
+                subscriptions = subscriptionsByEventType.get(eventClass);
         }
         if (subscriptions != null && !subscriptions.isEmpty()) {
             for (Subscription subscription : subscriptions) {
@@ -482,7 +508,10 @@ public class EventBus {
 
     void invokeSubscriber(Subscription subscription, Object event) {
         try {
-            subscription.subscriberMethod.method.invoke(subscription.subscriber, event);
+            if(event!=null)
+                subscription.subscriberMethod.method.invoke(subscription.subscriber, event);
+            else
+                subscription.subscriberMethod.method.invoke(subscription.subscriber);
         } catch (InvocationTargetException e) {
             handleSubscriberException(subscription, event, e.getCause());
         } catch (IllegalAccessException e) {

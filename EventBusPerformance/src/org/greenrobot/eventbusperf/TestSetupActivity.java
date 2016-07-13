@@ -24,6 +24,7 @@ import android.widget.AdapterView;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.TextView;
 
 import org.greenrobot.eventbus.ThreadMode;
 
@@ -86,6 +87,8 @@ public class TestSetupActivity extends Activity {
 
         EditText editTextSubscriber = (EditText) findViewById(R.id.editTextSubscribe);
         params.setSubscriberCount(Integer.parseInt(editTextSubscriber.getText().toString()));
+
+        params.setTag(((TextView)findViewById(R.id.editTextTagString)).getText().toString());
 
         Spinner spinnerTestToRun = (Spinner) findViewById(R.id.spinnerTestToRun);
         int testPos = spinnerTestToRun.getSelectedItemPosition();

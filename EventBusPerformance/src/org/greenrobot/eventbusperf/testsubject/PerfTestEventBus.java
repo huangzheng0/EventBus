@@ -17,9 +17,11 @@
 package org.greenrobot.eventbusperf.testsubject;
 
 import android.content.Context;
+import android.util.Log;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.TagEvent;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.lang.reflect.Constructor;
@@ -96,9 +98,18 @@ public abstract class PerfTestEventBus extends Test {
         }
 
         public void runTest() {
-            TestEvent event = new TestEvent();
+            Object event =null;
             long timeStart = System.nanoTime();
             for (int i = 0; i < super.eventCount; i++) {
+                event =  new TestEvent();
+                switch (i%3){
+                    case 1:
+                        event = new TagEvent(params.getTag(),event);
+                        break;
+                    case 2:
+                        event =  new TagEvent(params.getTag(),null);
+                        break;
+                }
                 super.eventBus.post(event);
                 if (canceled) {
                     break;
@@ -206,8 +217,21 @@ public abstract class PerfTestEventBus extends Test {
     }
 
     public class SubscribeClassEventBusMain {
-        @Subscribe(threadMode = ThreadMode.MAIN)
+        @Subscribe(threadMode = ThreadMode.MAIN,tag = "test")
         public void onEventMainThread(TestEvent event) {
+            Log.d("test", "receive tag event on MainThread");
+            eventsReceivedCount.incrementAndGet();
+        }
+
+        @Subscribe(threadMode = ThreadMode.MAIN)
+        public void onEventMainThreadWithOutTag(TestEvent event) {
+            Log.d("test", "receive event on MainThread");
+            eventsReceivedCount.incrementAndGet();
+        }
+
+        @Subscribe(threadMode = ThreadMode.MAIN ,tag = "test")
+        public void onEventMainThreadWithOutArgument() {
+            Log.d("test", "receive event on MainThread with no type");
             eventsReceivedCount.incrementAndGet();
         }
 
@@ -228,7 +252,7 @@ public abstract class PerfTestEventBus extends Test {
     }
 
     public class SubscribeClassEventBusBackground {
-        @Subscribe(threadMode = ThreadMode.BACKGROUND)
+        @Subscribe(threadMode = ThreadMode.BACKGROUND )
         public void onEventBackgroundThread(TestEvent event) {
             eventsReceivedCount.incrementAndGet();
         }
@@ -250,7 +274,7 @@ public abstract class PerfTestEventBus extends Test {
     }
 
     public class SubscriberClassEventBusAsync {
-        @Subscribe(threadMode = ThreadMode.ASYNC)
+        @Subscribe(threadMode = ThreadMode.ASYNC )
         public void onEventAsync(TestEvent event) {
             eventsReceivedCount.incrementAndGet();
         }
@@ -270,6 +294,33 @@ public abstract class PerfTestEventBus extends Test {
         public void dummy5() {
         }
     }
+
+
+
+    public class SubscriberClassEventBusTag {
+        @Subscribe(threadMode = ThreadMode.MAIN ,tag = "test")
+        public void onEventAsync(TestEvent event) {
+            eventsReceivedCount.incrementAndGet();
+        }
+
+        public void dummy() {
+        }
+
+        public void dummy2() {
+        }
+
+        public void dummy3() {
+        }
+
+        public void dummy4() {
+        }
+
+        public void dummy5() {
+        }
+    }
+
+
+
 
     private long registerSubscribers() {
         long time = 0;

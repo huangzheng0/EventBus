@@ -15,6 +15,7 @@
  */
 package org.greenrobot.eventbus.annotationprocessor;
 
+
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
@@ -145,9 +146,17 @@ public class EventBusAnnotationProcessor extends AbstractProcessor {
         }
 
         List<? extends VariableElement> parameters = ((ExecutableElement) element).getParameters();
-        if (parameters.size() != 1) {
-            messager.printMessage(Diagnostic.Kind.ERROR, "Subscriber method must have exactly 1 parameter", element);
+        if (parameters.size() > 1) {
+            messager.printMessage(Diagnostic.Kind.ERROR, "Subscriber method parameter count must less than 2", element);
             return false;
+        }
+
+        if(parameters.isEmpty()){
+            Subscribe subscribe =   element.getAnnotation(Subscribe.class);
+            if(subscribe!=null&&subscribe.tag().equals("")) {
+                messager.printMessage(Diagnostic.Kind.ERROR, "Subscriber method must have 1 parameter or not empty tag", element);
+                return false;
+            }
         }
         return true;
     }
@@ -177,28 +186,30 @@ public class EventBusAnnotationProcessor extends AbstractProcessor {
                 if (methods != null) {
                     for (ExecutableElement method : methods) {
                         String skipReason = null;
-                        VariableElement param = method.getParameters().get(0);
-                        TypeMirror typeMirror = getParamTypeMirror(param, messager);
-                        if (!(typeMirror instanceof DeclaredType) ||
-                                !(((DeclaredType) typeMirror).asElement() instanceof TypeElement)) {
-                            skipReason = "event type cannot be processed";
-                        }
-                        if (skipReason == null) {
-                            TypeElement eventTypeElement = (TypeElement) ((DeclaredType) typeMirror).asElement();
-                            if (!isVisible(myPackage, eventTypeElement)) {
-                                skipReason = "event type is not public";
+                        if(!method.getParameters().isEmpty()) {
+                            VariableElement param = method.getParameters().get(0);
+                            TypeMirror typeMirror = getParamTypeMirror(param, messager);
+                            if (!(typeMirror instanceof DeclaredType) ||
+                                    !(((DeclaredType) typeMirror).asElement() instanceof TypeElement)) {
+                                skipReason = "event type cannot be processed";
                             }
-                        }
-                        if (skipReason != null) {
-                            boolean added = classesToSkip.add(skipCandidate);
-                            if (added) {
-                                String msg = "Falling back to reflection because " + skipReason;
-                                if (!subscriberClass.equals(skipCandidate)) {
-                                    msg += " (found in super class for " + skipCandidate + ")";
+                            if (skipReason == null) {
+                                TypeElement eventTypeElement = (TypeElement) ((DeclaredType) typeMirror).asElement();
+                                if (!isVisible(myPackage, eventTypeElement)) {
+                                    skipReason = "event type is not public";
                                 }
-                                messager.printMessage(Diagnostic.Kind.NOTE, msg, param);
                             }
-                            break;
+                            if (skipReason != null) {
+                                boolean added = classesToSkip.add(skipCandidate);
+                                if (added) {
+                                    String msg = "Falling back to reflection because " + skipReason;
+                                    if (!subscriberClass.equals(skipCandidate)) {
+                                        msg += " (found in super class for " + skipCandidate + ")";
+                                    }
+                                    messager.printMessage(Diagnostic.Kind.NOTE, msg, param);
+                                }
+                                break;
+                            }
                         }
                     }
                 }
@@ -274,34 +285,41 @@ public class EventBusAnnotationProcessor extends AbstractProcessor {
                                               String callPrefix, String myPackage) throws IOException {
         for (ExecutableElement method : methods) {
             List<? extends VariableElement> parameters = method.getParameters();
-            TypeMirror paramType = getParamTypeMirror(parameters.get(0), null);
-            TypeElement paramElement = (TypeElement) processingEnv.getTypeUtils().asElement(paramType);
+            String eventClass;
             String methodName = method.getSimpleName().toString();
-            String eventClass = getClassString(paramElement, myPackage) + ".class";
-
+            TypeElement paramElement = null;
+            if(parameters==null||parameters.isEmpty()){
+                eventClass = "null";
+            }else{
+                TypeMirror paramType = getParamTypeMirror(parameters.get(0), null);
+                paramElement = (TypeElement) processingEnv.getTypeUtils().asElement(paramType);
+                eventClass = getClassString(paramElement, myPackage) + ".class";
+            }
             Subscribe subscribe = method.getAnnotation(Subscribe.class);
             List<String> parts = new ArrayList<>();
             parts.add(callPrefix + "(\"" + methodName + "\",");
-            String lineEnd = "),";
+            parts.add(eventClass);
             if (subscribe.priority() == 0 && !subscribe.sticky()) {
-                if (subscribe.threadMode() == ThreadMode.POSTING) {
-                    parts.add(eventClass + lineEnd);
-                } else {
-                    parts.add(eventClass + ",");
-                    parts.add("ThreadMode." + subscribe.threadMode().name() + lineEnd);
+                if (subscribe.threadMode() != ThreadMode.POSTING) {
+                    parts.add(",ThreadMode." + subscribe.threadMode().name() );
+                }
+                if(!subscribe.tag().equals("")){
+                    parts.add(",\""+subscribe.tag()+"\"");
                 }
             } else {
-                parts.add(eventClass + ",");
-                parts.add("ThreadMode." + subscribe.threadMode().name() + ",");
+                parts.add(",ThreadMode." + subscribe.threadMode().name() + ",");
                 parts.add(subscribe.priority() + ",");
-                parts.add(subscribe.sticky() + lineEnd);
+                parts.add(String.valueOf(subscribe.sticky()));
+                parts.add(",\""+subscribe.tag()+"\"");
             }
+            String lineEnd = "),";
+            parts.add(lineEnd);
             writeLine(writer, 3, parts.toArray(new String[parts.size()]));
 
             if (verbose) {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, "Indexed @Subscribe at " +
                         method.getEnclosingElement().getSimpleName() + "." + methodName +
-                        "(" + paramElement.getSimpleName() + ")");
+                        "(" + paramElement !=null?paramElement.getSimpleName():" " + ")");
             }
 
         }

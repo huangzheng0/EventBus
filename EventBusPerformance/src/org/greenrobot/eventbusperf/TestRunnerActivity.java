@@ -80,6 +80,32 @@ public class TestRunnerActivity extends Activity {
         }
     }
 
+
+//    @Subscribe(threadMode = ThreadMode.MAIN,tag = "test")
+//    public void onEventMainThread(){
+//        String text = "<b>" + "tag event  without  argument" + "</b><br/>" ;
+//        text += "<br/>----------------<br/>";
+//        textViewResult.append(Html.fromHtml(text));
+//    }
+
+//    @Subscribe(threadMode = ThreadMode.MAIN,tag = "test")
+//    public void onEventMainThreadWithTag(TestFinishedEvent event){
+//        Test test = event.test;
+//        String text = "<b> tag event with argument " + test.getDisplayName() + "</b><br/>" + //
+//                test.getPrimaryResultMicros() + " micro seconds<br/>" + //
+//                ((int) test.getPrimaryResultRate()) + "/s<br/>";
+//        if (test.getOtherTestResults() != null) {
+//            text += test.getOtherTestResults();
+//        }
+//        text += "<br/>----------------<br/>";
+//        textViewResult.append(Html.fromHtml(text));
+//        if (event.isLastEvent) {
+//            findViewById(R.id.buttonCancel).setVisibility(View.GONE);
+//            findViewById(R.id.textViewTestRunning).setVisibility(View.GONE);
+//            findViewById(R.id.buttonKillProcess).setVisibility(View.VISIBLE);
+//        }
+//    }
+
     public void onClickCancel(View view) {
         // Cancel asap
         if (testRunner != null) {

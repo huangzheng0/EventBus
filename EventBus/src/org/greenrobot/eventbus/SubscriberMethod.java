@@ -26,13 +26,14 @@ public class SubscriberMethod {
     final boolean sticky;
     /** Used for efficient comparison */
     String methodString;
-
-    public SubscriberMethod(Method method, Class<?> eventType, ThreadMode threadMode, int priority, boolean sticky) {
+    final String tag;
+    public SubscriberMethod(Method method, Class<?> eventType, ThreadMode threadMode, int priority, boolean sticky,String tag) {
         this.method = method;
         this.threadMode = threadMode;
         this.eventType = eventType;
         this.priority = priority;
         this.sticky = sticky;
+        this.tag = tag;
     }
 
     @Override

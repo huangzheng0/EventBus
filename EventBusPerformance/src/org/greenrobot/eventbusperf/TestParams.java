@@ -31,6 +31,7 @@ public class TestParams implements Serializable {
     private boolean eventInheritance;
     private boolean ignoreGeneratedIndex;
     private int testNumber;
+    private String tag;
     private ArrayList<Class<? extends Test>> testClasses;
 
     public int getEventCount() {
@@ -97,4 +98,11 @@ public class TestParams implements Serializable {
         this.testNumber = testNumber;
     }
 
+    public String getTag() {
+        return tag;
+    }
+
+    public void setTag(String tag) {
+        this.tag = tag;
+    }
 }

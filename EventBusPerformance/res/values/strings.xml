@@ -10,6 +10,7 @@
     <string name="test_localBroadcast">Local Broadcast</string>
     <string name="eventViewText">Events:</string>
     <string name="subscriberViewText">Subscribers:</string>
+    <string name="tagViewText">Tag:</string>
     <string name="buttonStartText">Start</string>
 
     <string-array name="spinnerTestsToRun">

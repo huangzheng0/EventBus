@@ -17,6 +17,7 @@
 package org.greenrobot.eventbusperf;
 
 import android.content.Context;
+import android.util.Log;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -28,9 +29,9 @@ import java.util.List;
  * This thread initialize all selected tests and runs them through. Also the thread skips the tests, when it is canceled
  */
 public class TestRunner extends Thread {
+    private final EventBus controlBus;
     private List<Test> tests;
     private volatile boolean canceled;
-    private final EventBus controlBus;
 
     public TestRunner(Context context, TestParams testParams, EventBus controlBus) {
         this.controlBus = controlBus;
@@ -59,10 +60,17 @@ public class TestRunner extends Thread {
                 Thread.sleep(300);
             } catch (InterruptedException e) {
             }
-
-            test.prepareTest();
+            try {
+                test.prepareTest();
+            } catch (Exception e) {
+                Log.e(getClass().getSimpleName(), "prepareTest :" + e.getMessage());
+            }
             if (!canceled) {
-                test.runTest();
+                try {
+                    test.runTest();
+                } catch (Exception e) {
+                    Log.e(getClass().getSimpleName(), "runTest :" + e.getMessage());
+                }
             }
             if (!canceled) {
                 boolean isLastEvent = idx == tests.size() - 1;

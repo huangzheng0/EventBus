@@ -46,7 +46,9 @@ public abstract class AbstractSubscriberInfo implements SubscriberInfo {
         }
         try {
             return superSubscriberInfoClass.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
+        } catch (InstantiationException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
     }
@@ -57,18 +59,23 @@ public abstract class AbstractSubscriberInfo implements SubscriberInfo {
     }
 
     protected SubscriberMethod createSubscriberMethod(String methodName, Class<?> eventType) {
-        return createSubscriberMethod(methodName, eventType, ThreadMode.POSTING, 0, false);
+        return createSubscriberMethod(methodName, eventType, ThreadMode.POSTING, 0, false,"");
     }
 
     protected SubscriberMethod createSubscriberMethod(String methodName, Class<?> eventType, ThreadMode threadMode) {
-        return createSubscriberMethod(methodName, eventType, threadMode, 0, false);
+        return createSubscriberMethod(methodName, eventType, threadMode, 0, false,"");
     }
 
     protected SubscriberMethod createSubscriberMethod(String methodName, Class<?> eventType, ThreadMode threadMode,
-                                                      int priority, boolean sticky) {
+                                                      int priority, boolean sticky,String tag) {
         try {
-            Method method = subscriberClass.getDeclaredMethod(methodName, eventType);
-            return new SubscriberMethod(method, eventType, threadMode, priority, sticky);
+            Method method;
+            if(eventType == null){
+                  method = subscriberClass.getDeclaredMethod(methodName);
+            }else{
+                  method = subscriberClass.getDeclaredMethod(methodName, eventType);
+            }
+            return new SubscriberMethod(method, eventType, threadMode, priority, sticky,tag);
         } catch (NoSuchMethodException e) {
             throw new EventBusException("Could not find subscriber method in " + subscriberClass +
                     ". Maybe a missing ProGuard rule?", e);
