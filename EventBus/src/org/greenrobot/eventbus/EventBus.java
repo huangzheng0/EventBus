@@ -142,9 +142,18 @@ public class EventBus {
         List<SubscriberMethod> subscriberMethods = subscriberMethodFinder.findSubscriberMethods(subscriberClass);
         synchronized (this) {
             for (SubscriberMethod subscriberMethod : subscriberMethods) {
-                if(mExtraEventProvider!=null&&mExtraEventProvider.interesting(subscriberMethod))
-                    mExtraEventProvider.subscribe(subscriber,subscriberMethod);
-                else
+                if(mExtraEventProvider!=null&&mExtraEventProvider.interesting(subscriberMethod)) {
+                    mExtraEventProvider.subscribe(subscriber, subscriberMethod);
+                    if(subscriberMethod.sticky){
+                        List<?> extraStickyEvents =  mExtraEventProvider.getStickyEvent(subscriberMethod,eventInheritance);
+                        if(extraStickyEvents!=null) {
+                            Subscription subscription =  new Subscription(subscriber,subscriberMethod);
+                            for (int i = 0; i < extraStickyEvents.size(); i++) {
+                                checkPostStickyEventToSubscription(subscription , extraStickyEvents.get(i));
+                            }
+                        }
+                    }
+                }else
                     subscribe(subscriber, subscriberMethod);
             }
         }
@@ -273,8 +282,13 @@ public class EventBus {
     }
 
     public void postTagEvent(String tag,Object event){
-        post(new TagEvent(tag,event));
+        post(new TagEvent(tag,event,false));
     }
+
+    public void postTagEvent(String tag,Object event,boolean sticky){
+        post(new TagEvent(tag,event,sticky));
+    }
+
 
     /**
      * Called from a subscriber's event handling method, further event delivery will be canceled. Subsequent

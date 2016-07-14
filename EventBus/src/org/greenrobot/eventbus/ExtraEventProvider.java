@@ -1,5 +1,7 @@
 package org.greenrobot.eventbus;
 
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -24,5 +26,7 @@ public interface ExtraEventProvider {
     Class<?> getClass(Object event);
 
     Object getEvent(Object event);
+
+    List<?> getStickyEvent(SubscriberMethod subscriberMethod,boolean eventInheritance);
 
 }

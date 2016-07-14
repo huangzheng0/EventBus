@@ -1,27 +1,36 @@
 package org.greenrobot.eventbus;
 
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by pool on 2016/7/12.
  */
 public class TagEventProvider implements ExtraEventProvider {
+    public static final String TAG = EventBus.TAG;
+
     private final Map<TagEventKey, CopyOnWriteArrayList<Subscription>> tagSubscriptionsByEventType;
     private final Map<Object, List<TagEventKey>> tagTypesBySubscriber;
+    private final Map<TagEventKey, TagEvent> stickyEvents;
+
 
     TagEventProvider() {
         tagSubscriptionsByEventType = new HashMap<>();
         tagTypesBySubscriber = new HashMap<>();
+        stickyEvents = new HashMap<>();
     }
 
     @Override
     public boolean interesting(Object event) {
-        return event != null && TagEvent.class==event.getClass();
+        boolean interesting = event != null && TagEvent.class == event.getClass();
+        return interesting;
     }
 
     @Override
@@ -37,7 +46,7 @@ public class TagEventProvider implements ExtraEventProvider {
         if (types == null) {
             types = new ArrayList<>();
             types.add(eventKey);
-            tagTypesBySubscriber.put(subscriber,types);
+            tagTypesBySubscriber.put(subscriber, types);
         } else {
             if (types.contains(eventKey)) {
                 //already register
@@ -91,12 +100,40 @@ public class TagEventProvider implements ExtraEventProvider {
     @Override
     public Class<?> getClass(Object event) {
         TagEvent tagEvent = (TagEvent) event;
-        return  tagEvent.event!=null ? tagEvent.event.getClass():null ;
+        if (tagEvent.sticky) {
+            stickyEvents.put(new TagEventKey(tagEvent.tag, tagEvent.event == null ? null : tagEvent.event.getClass()), tagEvent);
+            Log.d(TAG,  "add new sticky TagEvent " + (tagEvent.event!=null ? tagEvent.event.toString() :" null event"));
+        }
+        return tagEvent.event != null ? tagEvent.event.getClass() : null;
     }
 
     @Override
     public Object getEvent(Object event) {
         return ((TagEvent) event).event;
+    }
+
+    @Override
+    public List<?> getStickyEvent(SubscriberMethod subscriberMethod, boolean eventInheritance) {
+        if (!subscriberMethod.sticky)
+            return null;
+        List<Object> result = new ArrayList<>();
+        TagEvent stickyEvent;
+        Class<?> eventType = subscriberMethod.eventType;
+        if (eventInheritance) {
+            Set<Map.Entry<TagEventKey, TagEvent>> entries = stickyEvents.entrySet();
+            for (Map.Entry<TagEventKey, TagEvent> entry : entries) {
+                TagEventKey candidateEventType = entry.getKey();
+                if ((subscriberMethod.tag != null ? subscriberMethod.tag.equals(candidateEventType.tag) : candidateEventType.tag == null)
+                        && ((candidateEventType.eventType != null && eventType != null) ? eventType.isAssignableFrom(candidateEventType.eventType) : candidateEventType.eventType == eventType)) {
+                    stickyEvent = entry.getValue();
+                    result.add(stickyEvent.event);
+                }
+            }
+        } else {
+            stickyEvent = stickyEvents.get(new TagEventKey(subscriberMethod.tag, subscriberMethod.eventType));
+            result.add(stickyEvent.event);
+        }
+        return result;
     }
 
 
