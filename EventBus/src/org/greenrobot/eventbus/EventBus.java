@@ -149,7 +149,7 @@ public class EventBus {
                         if(extraStickyEvents!=null) {
                             Subscription subscription =  new Subscription(subscriber,subscriberMethod);
                             for (int i = 0; i < extraStickyEvents.size(); i++) {
-                                checkPostStickyEventToSubscription(subscription , extraStickyEvents.get(i));
+                                postToSubscription(subscription , extraStickyEvents.get(i),Looper.getMainLooper() == Looper.myLooper());
                             }
                         }
                     }
