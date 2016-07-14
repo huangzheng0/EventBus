@@ -69,7 +69,7 @@ public class TagEventProvider implements ExtraEventProvider {
                     subscription = subscriptions.get(j);
                     if (subscription.subscriber == subscriber) {
                         subscription.active = false;
-                        subscriptions.remove(i);
+                        subscriptions.remove(j);
                         j--;
                         size--;
                     }
