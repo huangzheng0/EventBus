@@ -83,6 +83,8 @@ public class TagEventProvider implements ExtraEventProvider {
                         size--;
                     }
                 }
+                if (subscriptions.isEmpty())
+                    tagSubscriptionsByEventType.remove(key);
             }
             tagTypesBySubscriber.remove(subscriber);
             return true;
@@ -102,7 +104,7 @@ public class TagEventProvider implements ExtraEventProvider {
         TagEvent tagEvent = (TagEvent) event;
         if (tagEvent.sticky) {
             stickyEvents.put(new TagEventKey(tagEvent.tag, tagEvent.event == null ? null : tagEvent.event.getClass()), tagEvent);
-            Log.d(TAG,  "add new sticky TagEvent " + (tagEvent.event!=null ? tagEvent.event.toString() :" null event"));
+            Log.d(TAG, "add new sticky TagEvent " + (tagEvent.event != null ? tagEvent.event.toString() : " null event"));
         }
         return tagEvent.event != null ? tagEvent.event.getClass() : null;
     }
